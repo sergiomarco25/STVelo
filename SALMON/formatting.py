@@ -14,12 +14,28 @@ import json
 
 
 def filter_distant_reads(adata,max_distance=10):
-    ''' Function to filter the transcripts assign to cells based on the distance of reads to nucleus''' 
+    """ Filter reads that are too far from the cells from adata.uns['spots']
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+    max_distance(float): Maxium distance from each read to their closest nucleus edge required to be kept in the analyis
+
+    Returns:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots'] with filtered reads
+
+   """
     adata.uns['spots']=adata.uns['spots'][adata.uns['spots']['nucleus_distance']<max_distance]
     return adata
 
 def transcript_based_adata(adata):
-    '''Function to recompute adata counts, stored in adata.X, based on the read-based info, in adata.uns['spots']'''
+    """ Function to recompute adata counts, stored in adata.X, based on the read-based info, in adata.uns['spots']
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adata1nuc : Cell expression in AnnData format redefined based on the read information in adata.uns['spots'] 
+   """
     ct1=pd.crosstab(adata.uns['spots']['cell_id'],adata.uns['spots']['feature_name'])
     adataobs=adata.obs.loc[adata.obs['cell_id'].isin(ct1.index),:]
     av=adata.var['gene_id'][adata.var['gene_id'].isin(ct1.columns)]#.isin(adata1.var.index)
@@ -35,5 +51,15 @@ def transcript_based_adata(adata):
     return adata1nuc
 
 def adata_based_transcripts(adata):
+    """ Function to filter in adata.uns['spots'] based on the cells present in the AnnData.obs info (in cell_id)
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adata : Cell expression in AnnData format with redefined adata.uns['spots'] 
+    
+   """
+    
     adata.uns['spots']=adata.uns['spots'][adata.uns['spots']['cell_id'].astype(str).isin(adata.obs['cell_id'].astype(str))]
     return adata
