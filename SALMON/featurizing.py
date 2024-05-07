@@ -11,16 +11,26 @@ import tifffile as tf
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from anndata import AnnData
 import json
+from tqdm import tqdm
+from libpysal import weights, examples
+from contextily import add_basemap
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+from scipy.spatial import KDTree
 
 def subcellular_featurization(adatafilt,knn=3):
-    '''Function to featurize the cells but using the subcellular location of transcripts instead'''
-    from tqdm import tqdm
-    from libpysal import weights, examples
-    from contextily import add_basemap
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    import numpy as np
-    from scipy.spatial import KDTree
+     """ Featurize cells based on pairs of neighboring genes occuring in cells, computed based on a knn graph.
+   
+    Parameters:
+    adatafilt (AnnData): AnnData object with the cells of the experiment. Adata.uns['spots'] should include information about reads, including spatial coords, identify and cell assigned to
+    knn (int): number of nearest neighbors to consider when computed the pairs of neighboring genes
+
+    Returns:
+    adataneigh: AnnData object with the neighboring
+
+   """
+   
 
     tr2=adatafilt.uns['spots']
     tr2['feature_name']=tr2['feature_name'].str.replace('_','')
