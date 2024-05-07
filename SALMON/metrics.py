@@ -15,6 +15,15 @@ from tqdm import tqdm
 
 
 def define_cell_polarities(adatafilt:AnnData):
+    """ Define cell polarities based on data present on adata.uns['spots']. Polarity in here is defined as the mean distance of the gene specific centroids to the cellular centroid
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with mean and maximum polarity included in adata.obs
+    
+   """
     cells=adatafilt.uns['spots']['cell_id'].unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
     positiondict=dict(zip(list(feats),range(0,len(feats))))
@@ -54,7 +63,16 @@ def define_cell_polarities(adatafilt:AnnData):
 
 
 def extract_nuclear_and_cytoplasmic(adata:AnnData):
-    '''Function to compute nuclear expression matrix and cytoplasmic expression matrix'''
+    """ Function to compute nuclear expression matrix and cytoplasmic expression matrix
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adata : Cell expression in AnnData format with redefined adata.uns['spots'], including nuclear expression matrix in adata.uns['nuclear_expression'] and cytoplasmic expression in adata.uns['cytoplasmic_expression']
+    
+   """
+
     didi={0:'cyt',1:'nuc'}
     adata.uns['spots']['feature_n_loc']=adata.uns['spots']['feature_name']+'_'+adata.uns['spots']['overlaps_nucleus'].map(didi)
     div_exp=pd.crosstab(adata.uns['spots']['cell_id'],adata.uns['spots']['feature_n_loc'])
@@ -71,7 +89,16 @@ def extract_nuclear_and_cytoplasmic(adata:AnnData):
     return adata
 
 def nuclear_and_cytoplasmic_characteristics(adata:AnnData,minimum_expression=0):
-    '''Function to compute the differences in expression between nuclei and cytoplasm'''
+    """ Function to extract the main characteristics of the nuclear and cytoplasmic expression
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+    minimum_expression (int): minimum expression of a gene in a cell to be considered expressed in each compartment
+
+    Returns:
+    adata : Cell expression in AnnData format with with main compartment characteristics defined
+    
+   """
     adata=extract_nuclear_and_cytoplasmic(adata)
     adata.obs['nuc_and_cyt_genes']=list(np.sum(((adata.uns['cytoplasmic_expression']>minimum_expression)*1+(adata.uns['nuclear_expression']>minimum_expression)*1)==2,axis=1))
     adata.obs['cyt_genes']=list(np.sum(((adata.uns['cytoplasmic_expression']>minimum_expression)*1+(adata.uns['nuclear_expression']<=minimum_expression)*1)==2,axis=1))
@@ -90,7 +117,18 @@ def nuclear_and_cytoplasmic_characteristics(adata:AnnData,minimum_expression=0):
 
 from sklearn.decomposition import PCA
 def polarization_based_pca(adatafilt:AnnData,plot=False,min_gene_counts:int=0):
-    '''Function to compute nuclear expression matrix and cytoplasmic expression matrix'''
+
+    """ Function to compute polarization based on the relative importance of PC1 in the coordinates obtained from gene_specific centroids
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+    plot(boolean): whether to plot associated plots or not. 
+    min_gene_counts(int): minimum number of counts per cell for each gene to consider that gene in the ANALYSIS.
+    
+    Returns:
+    adata : Cell expression in AnnData format with polarization scores based on the importance of PCA
+    
+   """
     cells=adatafilt.uns['spots']['cell_id'].astype(str).unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
     positiondict=dict(zip(list(feats),range(0,len(feats))))
@@ -144,7 +182,15 @@ def polarization_based_pca(adatafilt:AnnData,plot=False,min_gene_counts:int=0):
 
 
 def compute_nuclear_centroid(adatafilt:AnnData):
-    '''Function to calculate the centroid of the nuclei of each gene and the distance from cell centroid to nuclei centroid'''
+    """ Function to calculate the centroid of the nuclei based on nuclei-assigned ranscripts
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with nuclear centroid position
+    
+   """
     cells=adatafilt.uns['spots']['cell_id'].unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
     positiondict=dict(zip(list(feats),range(0,len(feats))))
@@ -186,6 +232,15 @@ def compute_nuclear_centroid(adatafilt:AnnData):
 
 
 def define_cell_polarities_angles(adatafilt:AnnData):
+     """ DEPRECATED FUNCTION. Function to calculate the polarity based on angles 
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with computed polarity
+    
+   """
     cells=adatafilt.uns['spots']['cell_id'].unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
     positiondict=dict(zip(list(feats),range(0,len(feats))))
@@ -222,10 +277,19 @@ def define_cell_polarities_angles(adatafilt:AnnData):
 
 
 def centrality_scores(adatafilt:AnnData):
-## new function to calculate centrality scores for genes
-##    - closeness centrality: how close a group is to other nodes
-##   - degree centrality: fraction of connected non-group members
-##    - clustering coeffeicient: measure of the degree to which nodes cluster
+""" Calculate centrality scores for genes using squidpy's implementation of these scores. Includes:
+        - closeness centrality: how close a group is to other nodes
+        - degree centrality: fraction of connected non-group members
+        - clustering coeffeicient: measure of the degree to which nodes cluster
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with centrality scores computed per gene and stored in adatafilt.uns['{'ac/cc/dc'}_score']
+    
+   """
+
     cells=adatafilt.uns['spots']['cell_id'].unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
     positiondict=dict(zip(list(feats),range(0,len(feats))))
@@ -264,18 +328,17 @@ def centrality_scores(adatafilt:AnnData):
 
 
 def calcualte_densities(adatafilt:AnnData):
-    '''Compute read density in cell, cytoplasm and nuclei
-    Note: that it requires counts by compartment and areas'''
-    adatafilt.obs['cytoplasm_area']=adatafilt.obs['cell_area']-adatafilt.obs['nucleus_area']
-    adatafilt.obs['nucleus_area_proportion']=adatafilt.obs['nucleus_area']/adatafilt.obs['cell_area']
-    adatafilt.obs['cyt_density']=adatafilt.obs['cyt_counts']/adatafilt.obs['cytoplasm_area']
-    adatafilt.obs['nuc_density']=adatafilt.obs['nuc_counts']/adatafilt.obs['nucleus_area']
-    adatafilt.obs['cell_density']=(adatafilt.obs['cyt_counts']+adatafilt.obs['nuc_counts'])/adatafilt.obs['cell_area']
-    return adatafilt
+    """ Compute read density in cell, cytoplasm and nuclei
+    Note: that it requires counts by compartment and areas
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
 
-def calcualte_densities(adatafilt:AnnData):
-    '''Compute read density in cell, cytoplasm and nuclei
-    Note: that it requires counts by compartment and areas'''
+    Returns:
+    adatafilt : Cell expression in AnnData format with cell,nuclear and cytoplasic densities computed
+    
+   """
+
     adatafilt.obs['cytoplasm_area']=adatafilt.obs['cell_area']-adatafilt.obs['nucleus_area']
     adatafilt.obs['nucleus_area_proportion']=adatafilt.obs['nucleus_area']/adatafilt.obs['cell_area']
     adatafilt.obs['cyt_density']=adatafilt.obs['cyt_counts']/adatafilt.obs['cytoplasm_area']
@@ -285,7 +348,17 @@ def calcualte_densities(adatafilt:AnnData):
 
 
 def nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
-    '''Compute nuclear-to_cytoplasmic correlation'''
+    """ Compute nuclear-to_cytoplasmic correlation for each cell
+    Note: that it requires counts by compartment (nuc vs cyt)
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with nuclear_to_cytoplasmic correlation computed for each cell
+    
+   """ 
+    
     nuc_cyt_corr=[]
     adatafilt.uns['nuclear_expression']=adatafilt.uns['nuclear_expression'].loc[:,adatafilt.uns['nuclear_expression'].columns.isin(adatafilt.uns['cytoplasmic_expression'].columns)]
     adatafilt.uns['cytoplasmic_expression']=adatafilt.uns['cytoplasmic_expression'].loc[:,adatafilt.uns['cytoplasmic_expression'].columns.isin(adatafilt.uns['nuclear_expression'].columns)]
@@ -295,7 +368,16 @@ def nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
     return adatafilt
 
 def gene_nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
-    '''For every gene, Compute nuclear-to_cytoplasmic correlation'''
+     """ Compute, for each gene, the nuclear-to_cytoplasmic correlation across cells
+    Note: that it requires counts by compartment
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with nuclear_to_cytoplasmic correlation computed for each gene
+    
+   """ 
     nuc_cyt_corr=[]
     for c in tqdm(adatafilt.var.index):#adatafilt.uns['nuclear_expression'].index):
         try:
