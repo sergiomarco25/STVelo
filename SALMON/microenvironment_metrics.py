@@ -14,10 +14,21 @@ import json
 import squidpy as sq
 from tqdm import tqdm
 
-# new binning function using neighbors
-# in here, condit should be the sample name
-# sname is the name of your cluster column (aka leiden for example)
+
 def format_data_neighs_radius(adata,sname,condit,radius=20):
+     """ Function to redefine the each cell using neighbors' identity. Also compute neighborhood density
+   
+    Parameters:
+    adata (AnnData): Cell expression in AnnData format,
+    sname(str): name of the column in adata.obs that includes your cluster information (aka leiden)
+    condit(str): name of the column in adata.obs where the sample origin of each cell is stored.
+    radius(int): for each cell, cells situated within at a distance closer than radius will be use in the refinition of cells
+
+    Returns:
+    adata : Cell expression in AnnData format with a cell-by-neighboring cell type matrix in adata.X.
+    
+   """ 
+    
     adata_copy_int=adata
     sq.gr.spatial_neighbors(adata_copy_int,radius=radius,coord_type = 'generic')
     result=np.zeros([adata.shape[0],len(adata_copy_int.obs[sname].unique())])
@@ -39,6 +50,16 @@ def format_data_neighs_radius(adata,sname,condit,radius=20):
     return adata
 
 def compute_closest_neighbor_distance(adatafilt):
+    """  Compute, for each cell, the distance to its closest neighbor's centroid
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format
+
+    Returns:
+    adatafilt : Cell expression in AnnData format with 'closest_cell_distance' term included in adatafilt.obs
+    
+   """ 
+    
     adata_copy_int=adatafilt
     sq.gr.spatial_neighbors(adata_copy_int,n_neighs=1,coord_type = 'generic')
     n=0
