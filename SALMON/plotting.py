@@ -15,6 +15,20 @@ import json
 
 
 def polarity_visualizer(adatafilt:AnnData,cell_id_sel='',num=3,clust='leiden',gap=30):
+    """ Visualize the polarity of selected cells
+   
+    Parameters:
+    adatafilt (AnnData): Cell expression in AnnData format, with read info in adata.uns['spots']
+    cell_id_sel(str): name of the cell to plot (cell_id)
+    num(int): number of genes visualized, starting from the most polarized ones.
+    clust(str): column in adata.obs with the information about the cluster assigned to each cell
+    gap(int): number of pixels to visualize from the centroid of the selected cell in x and y directions. This is how big the ROI visualized is 
+   
+    Returns:
+    None
+    
+   """ 
+    
     xcen=adatafilt.obs.loc[cell_id_sel,'x_centroid']
     ycen=adatafilt.obs.loc[cell_id_sel,'y_centroid']
     cell_reads=adatafilt.uns['spots'][adatafilt.uns['spots']['cell_id']==cell_id_sel]
