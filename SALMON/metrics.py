@@ -232,6 +232,7 @@ def compute_nuclear_centroid(adatafilt:AnnData):
 
 
 def define_cell_polarities_angles(adatafilt:AnnData):
+     
      """ DEPRECATED FUNCTION. Function to calculate the polarity based on angles 
    
     Parameters:
@@ -241,17 +242,18 @@ def define_cell_polarities_angles(adatafilt:AnnData):
     adatafilt : Cell expression in AnnData format with computed polarity
     
    """
-    cells=adatafilt.uns['spots']['cell_id'].unique()
-    feats=adatafilt.uns['spots']['feature_name'].unique()
-    positiondict=dict(zip(list(feats),range(0,len(feats))))
-    resarray=np.zeros([len(cells),len(feats)])
-    resx=np.zeros([len(cells),len(feats)])
-    resy=np.zeros([len(cells),len(feats)])
-    id2x2=dict(zip(adatafilt.obs['cell_id'],adatafilt.obs['x_centroid']))
-    id2y2=dict(zip(adatafilt.obs['cell_id'],adatafilt.obs['y_centroid']))
-    ee=0
-    cell_ids=[]
-    for a,g in tqdm(adatafilt.uns['spots'].groupby('cell_id')):
+     cells=adatafilt.uns['spots']['cell_id'].unique()
+     feats=adatafilt.uns['spots']['feature_name'].unique()
+     positiondict=dict(zip(list(feats),range(0,len(feats))))
+     resarray=np.zeros([len(cells),len(feats)])
+     resx=np.zeros([len(cells),len(feats)])
+     resy=np.zeros([len(cells),len(feats)])
+     id2x2=dict(zip(adatafilt.obs['cell_id'],adatafilt.obs['x_centroid']))
+     id2y2=dict(zip(adatafilt.obs['cell_id'],adatafilt.obs['y_centroid']))
+     ee=0
+     cell_ids=[]
+     for a,g in tqdm(adatafilt.uns['spots'].groupby('cell_id')):
+
         xcell=id2x2[a]
         ycell=id2y2[a]
         ii=0
@@ -263,21 +265,23 @@ def define_cell_polarities_angles(adatafilt:AnnData):
         resy[ee,list(meang.index.map(positiondict))]=meang['y_location']-ycell
         ee=ee+1
         cell_ids.append(a)
-    polarity=pd.DataFrame(resarray,index=cell_ids,columns=feats)
-    xgene=pd.DataFrame(resx,index=cell_ids,columns=feats)
-    ygene=pd.DataFrame(resy,index=cell_ids,columns=feats)
-    adatafilt.obsm['polarity']=polarity.loc[adatafilt.obs['cell_id'],:]
-    adatafilt.obsm['polarity']=adatafilt.obsm['polarity'].loc[:,adatafilt.var['gene_id']]
-    adatafilt.obsm['xgene']=xgene.loc[adatafilt.obs['cell_id'],:]
-    adatafilt.obsm['xgene']=adatafilt.obsm['xgene'].loc[:,adatafilt.var['gene_id']]
-    adatafilt.obsm['ygene']=ygene.loc[adatafilt.obs['cell_id'],:]
-    adatafilt.obsm['ygene']=adatafilt.obsm['ygene'].loc[:,adatafilt.var['gene_id']]
-    adatafilt.obsm['polarity'][adatafilt.obsm['polarity']==0]=np.nan
-    return adatafilt
+     polarity=pd.DataFrame(resarray,index=cell_ids,columns=feats)
+     xgene=pd.DataFrame(resx,index=cell_ids,columns=feats)
+     ygene=pd.DataFrame(resy,index=cell_ids,columns=feats)
+     adatafilt.obsm['polarity']=polarity.loc[adatafilt.obs['cell_id'],:]
+     adatafilt.obsm['polarity']=adatafilt.obsm['polarity'].loc[:,adatafilt.var['gene_id']]
+     adatafilt.obsm['xgene']=xgene.loc[adatafilt.obs['cell_id'],:]
+     adatafilt.obsm['xgene']=adatafilt.obsm['xgene'].loc[:,adatafilt.var['gene_id']]
+     adatafilt.obsm['ygene']=ygene.loc[adatafilt.obs['cell_id'],:]
+     adatafilt.obsm['ygene']=adatafilt.obsm['ygene'].loc[:,adatafilt.var['gene_id']]
+     adatafilt.obsm['polarity'][adatafilt.obsm['polarity']==0]=np.nan
+     return adatafilt
 
 
 def centrality_scores(adatafilt:AnnData):
-""" Calculate centrality scores for genes using squidpy's implementation of these scores. Includes:
+
+
+    """ Calculate centrality scores for genes using squidpy's implementation of these scores. Includes:
         - closeness centrality: how close a group is to other nodes
         - degree centrality: fraction of connected non-group members
         - clustering coeffeicient: measure of the degree to which nodes cluster
@@ -288,7 +292,7 @@ def centrality_scores(adatafilt:AnnData):
     Returns:
     adatafilt : Cell expression in AnnData format with centrality scores computed per gene and stored in adatafilt.uns['{'ac/cc/dc'}_score']
     
-   """
+    """
 
     cells=adatafilt.uns['spots']['cell_id'].unique()
     feats=adatafilt.uns['spots']['feature_name'].unique()
@@ -368,6 +372,8 @@ def nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
     return adatafilt
 
 def gene_nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
+     
+     
      """ Compute, for each gene, the nuclear-to_cytoplasmic correlation across cells
     Note: that it requires counts by compartment
    
@@ -377,12 +383,13 @@ def gene_nuclear_to_cytoplasmic_correlation(adatafilt:AnnData):
     Returns:
     adatafilt : Cell expression in AnnData format with nuclear_to_cytoplasmic correlation computed for each gene
     
-   """ 
-    nuc_cyt_corr=[]
-    for c in tqdm(adatafilt.var.index):#adatafilt.uns['nuclear_expression'].index):
+     """ 
+     nuc_cyt_corr=[]
+     for c in tqdm(adatafilt.var.index):#adatafilt.uns['nuclear_expression'].index):
+
         try:
             nuc_cyt_corr.append(np.corrcoef(adatafilt.uns['nuclear_expression'].loc[:,c],adatafilt.uns['cytoplasmic_expression'].loc[:,c])[0,1])
         except:
             nuc_cyt_corr.append(np.nan)
-    adatafilt.var['nuc_cyt_correlation']=nuc_cyt_corr
-    return adatafilt
+     adatafilt.var['nuc_cyt_correlation']=nuc_cyt_corr
+     return adatafilt
