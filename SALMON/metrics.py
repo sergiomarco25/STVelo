@@ -182,13 +182,16 @@ def polarization_based_pca(adatafilt:AnnData,plot=False,min_gene_counts:int=0):
 
 
 def compute_nuclear_centroid(adatafilt:AnnData):
-    """ Function to calculate the centroid of the nuclei based on nuclei-assigned ranscripts
+    """ Function to calculate the centroid of the nuclei based on nuclei-assigned transcripts
    
     Parameters:
     adata (AnnData): Cell expression in AnnData format, including read information in adata.uns['spots']
 
     Returns:
     adatafilt : Cell expression in AnnData format with nuclear centroid position
+    adatafilt.obs['nuclei_centroid_x']
+    adatafilt.obs['nuclei_centroid_y']
+    adatafilt.obs['distance_centroid_to_nuccentroid']
     
    """
     cells=adatafilt.uns['spots']['cell_id'].unique()

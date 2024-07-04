@@ -36,8 +36,8 @@ def transcript_based_adata(adata):
     Returns:
     adata1nuc : Cell expression in AnnData format redefined based on the read information in adata.uns['spots'] 
    """
-    ct1=pd.crosstab(adata.uns['spots']['cell_id'],adata.uns['spots']['feature_name'])
-    adataobs=adata.obs.loc[adata.obs['cell_id'].isin(ct1.index),:]
+    ct1 = pd.crosstab(adata.uns['spots']['cell_id'],adata.uns['spots']['feature_name'])
+    adataobs = adata.obs.loc[adata.obs['cell_id'].isin(ct1.index),:]
     av=adata.var['gene_id'][adata.var['gene_id'].isin(ct1.columns)]#.isin(adata1.var.index)
     av2=adata.var[adata.var['gene_id'].isin(ct1.columns)]#.isin(adata1.var.index)
     ct1=ct1.loc[:,av]
