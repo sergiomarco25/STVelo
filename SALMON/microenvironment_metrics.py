@@ -16,8 +16,8 @@ from tqdm import tqdm
 
 
 def format_data_neighs_radius(adata,sname,condit,radius=20):
-     """ Function to redefine the each cell using neighbors' identity. Also compute neighborhood density
-   
+    """ Function to redefine the each cell using neighbors' identity. Also compute neighborhood density
+
     Parameters:
     adata (AnnData): Cell expression in AnnData format,
     sname(str): name of the column in adata.obs that includes your cluster information (aka leiden)
@@ -26,8 +26,8 @@ def format_data_neighs_radius(adata,sname,condit,radius=20):
 
     Returns:
     adata : Cell expression in AnnData format with a cell-by-neighboring cell type matrix in adata.X.
-    
-   """ 
+
+    """ 
     
     adata_copy_int=adata
     sq.gr.spatial_neighbors(adata_copy_int,radius=radius,coord_type = 'generic')
@@ -51,14 +51,14 @@ def format_data_neighs_radius(adata,sname,condit,radius=20):
 
 def compute_closest_neighbor_distance(adatafilt):
     """  Compute, for each cell, the distance to its closest neighbor's centroid
-   
+
     Parameters:
     adatafilt (AnnData): Cell expression in AnnData format
 
     Returns:
     adatafilt : Cell expression in AnnData format with 'closest_cell_distance' term included in adatafilt.obs
-    
-   """ 
+
+    """ 
     
     adata_copy_int=adatafilt
     sq.gr.spatial_neighbors(adata_copy_int,n_neighs=1,coord_type = 'generic')
