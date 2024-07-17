@@ -3,7 +3,7 @@ Package design to perform and benchmark spatial RNA velocity models using nuclea
 
 # Folder structure
 This repository includes the following folders of interest:
-- **STVelo**: includes all the functions and classes implemented for merforming RNA insitu velocity and complementary analysis
+- **STVelo**: includes all the functions and classes implemented for performing RNA insitu velocity and complementary analysis
 - **notebooks**: contains notebooks exemplifying the use of in situ RNA velocity.
 
 # Installation
