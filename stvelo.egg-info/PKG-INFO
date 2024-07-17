@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: stvelo
+Version: 0.1.0
+Summary: Package to perform spatial rna velociy
+Home-page: UNKNOWN
+Author: Sergio Marco Salas
+Author-email: sergiomarco.salas@scilifelab.se
+License: UNKNOWN
+Description: # STvelo
+        Package design to perform and benchmark spatial RNA velocity models using nuclear-export models.
+        
+        # Folder structure
+        This repository includes the following folders of interest:
+        - **STVelo**: includes all the functions and classes implemented for merforming RNA insitu velocity and complementary analysis
+        - **notebooks**: contains notebooks exemplifying the use of in situ RNA velocity.
+        
+        
+Platform: UNKNOWN
+Description-Content-Type: text/markdown

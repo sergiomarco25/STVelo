@@ -5,7 +5,7 @@ name="stvelo",
     description="Package to perform spatial rna velociy",
     author="Sergio Marco Salas",
     author_email="sergiomarco.salas@scilifelab.se",
-    packages=["svelo","scvelo",'scanpy'],
-    install_requires=[
+    packages=["stvelo"],
+    install_requires=["scvelo","scanpy"
         # List your module's dependencies here
     ])

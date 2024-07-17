@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_unspliced_vs_spliced(a,genes:list=a.var.index,color:str=None,spotsize:int=2):
+def plot_unspliced_vs_spliced(a,genes:list=[''],color:str=None,spotsize:int=2):
     """ Plot, for the selected list of genes, the unspliced vs spliced transcripts
     
     Parameters:
@@ -34,7 +34,7 @@ def plot_unspliced_vs_spliced(a,genes:list=a.var.index,color:str=None,spotsize:i
         
         
         
-def plot_expression_vs_true_time(a,genes:list=a.var.index,color:str=None,spotsize:int=2):
+def plot_expression_vs_true_time(a,genes:list=[''],color:str=None,spotsize:int=2):
     """ Plot, for the selected list of genes, the expression vs true time
     
     Parameters:
@@ -60,7 +60,7 @@ def plot_expression_vs_true_time(a,genes:list=a.var.index,color:str=None,spotsiz
         num=num+1
         
         
-def plot_velocity_vs_true_t(a,genes:list=a.var.index,color:str=None,spotsize:int=2):
+def plot_velocity_vs_true_t(a,genes:list=[''],color:str=None,spotsize:int=2):
     """Plot, in simulations, the velocity of a gene versus its true velocity
     
     Parameters:

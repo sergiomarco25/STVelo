@@ -1,0 +1,9 @@
+README.md
+setup.cfg
+setup.py
+stvelo/__init__.py
+stvelo.egg-info/PKG-INFO
+stvelo.egg-info/SOURCES.txt
+stvelo.egg-info/dependency_links.txt
+stvelo.egg-info/requires.txt
+stvelo.egg-info/top_level.txt

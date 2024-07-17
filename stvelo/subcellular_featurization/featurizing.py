@@ -12,25 +12,22 @@ from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from anndata import AnnData
 import json
 from tqdm import tqdm
-from libpysal import weights, examples
-from contextily import add_basemap
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from scipy.spatial import KDTree
 
 def subcellular_featurization(adatafilt,knn=3):
-     """ Featurize cells based on pairs of neighboring genes occuring in cells, computed based on a knn graph.
+    """ Featurize cells based on pairs of neighboring genes occuring in cells, computed based on a knn graph.
    
     Parameters:
     adatafilt (AnnData): AnnData object with the cells of the experiment. Adata.uns['spots'] should include information about reads, including spatial coords, identify and cell assigned to
     knn (int): number of nearest neighbors to consider when computed the pairs of neighboring genes
 
     Returns:
-    adataneigh: AnnData object with the neighboring
+    adataneigh: AnnData object with the cells featurized according to the location of spots
 
    """
-   
 
     tr2=adatafilt.uns['spots']
     tr2['feature_name']=tr2['feature_name'].str.replace('_','')
@@ -98,4 +95,4 @@ def subcellular_featurization(adatafilt,knn=3):
         adataneigh.var.index=adataneigh.var.index.astype(int).map(unicoderev)
         alladata.append(adataneigh)
     adataneigh=sc.concat(alladata,join='outer')
-return adataneigh
+    return adataneigh
