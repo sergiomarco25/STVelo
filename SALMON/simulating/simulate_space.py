@@ -1,9 +1,13 @@
+import scvelo as scv
+import scanpy as sc
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 import random
 from sklearn.neighbors import NearestNeighbors
 
 def simulate_space(adata:'AnnData',how:str='random',size_x:str=1000,size_y:str=1000,spread:int=10):
     '''Simulate the spatial distribution of cells
-    
     Parameters
     ----------
     adata:'AnnData object'
@@ -19,11 +23,11 @@ def simulate_space(adata:'AnnData',how:str='random',size_x:str=1000,size_y:str=1
     spread:'int':
         If 'spatial_gradient' is considered as a method, spreads indicates how many units can the Y coordinate of a cell differ the Y position predicted from 'true_t'
         The higher this value is, the less clear the gradient will be
-
     Returns
     -------
     adata:'AnnData object'
-        Adata object including previously simulated cells with spatial position 
+        Adata object including previously simulated cells with spatial positions
+    
     '''
     if how=='random':
         n_cells=adata.obs.shape[0]
@@ -33,7 +37,6 @@ def simulate_space(adata:'AnnData',how:str='random',size_x:str=1000,size_y:str=1
         n_cells=adata.obs.shape[0]
         xpos=[random.uniform(0,size_x) for _ in range(n_cells)]
         n_cells=adata.obs.shape[0]
-        ypos=[random.uniform(0,size_y) for _ in range(n_cells)]
         relative_y=a.obs['true_t'].div(a.obs['true_t'].max())*size_y
         ypos=[i+random.uniform(-spread,spread) for i in relative_y]
 
@@ -41,4 +44,3 @@ def simulate_space(adata:'AnnData',how:str='random',size_x:str=1000,size_y:str=1
     adata.obs['y']=ypos
     adata.obsm['spatial']=np.array([list(xpos),list(ypos)]).transpose()
     return adata
-

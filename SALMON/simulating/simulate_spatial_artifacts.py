@@ -1,10 +1,14 @@
+import scvelo as scv
+import scanpy as sc
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 import random
 from sklearn.neighbors import NearestNeighbors
 
 
-
-def compute_missegmentation(adata:'AnnData',max_distance_misseg:float=10,max_missegmentation_proportion:float=0.1):
-    """Identify the presence of missegmented cells and compute missegmentation
+def simulate_missegmentation(adata:'AnnData',max_distance_misseg:float=10,max_missegmentation_proportion:float=0.1):
+    """Identify the presence of missegmented cells and simulate missegmentation
     Parameters
     ----------
     adata:'AnnData object'
@@ -58,3 +62,83 @@ def compute_missegmentation(adata:'AnnData',max_distance_misseg:float=10,max_mis
     adata.obs['missegmented_cell']=list(adata.obs.index.astype(int).isin(misseg_cell1))
     
     return adata
+
+def simulate_cytoplasmic_leakage(adata:'AnnData',max_cytoplasmic_leakage:float=0.1):
+    ''' Simulate cytoplasmic counts considered nuclear due to 2D segmentation of a 3D nuclei.
+    We consider this effect is systematic in all cells, but due to sampling some genes can be more affected than others
+     ----------
+    adata:'AnnData object'
+        Adata object including previously simulated cells 
+    max_cytoplasmic_leakage:float
+        Maximum proportion of cytoplasmic counts that can leak into the nucleus counts do 2D segmentation
+    Returns
+    -------
+    adata:'AnnData object'
+        Adata object including previously cells where leakage has been simulated
+    '''
+
+    expression=np.array(adata.X)
+    spliced_expression=adata.layers['spliced']
+    unspliced_expression=adata.layers['unspliced']
+    allperc=[]
+    for index in range(expression.shape[0]):
+        perc=[random.uniform(0,max_cytoplasmic_leakage) for e in range(expression.shape[1])]
+        allperc.append(np.mean(perc))
+        added_expression=spliced_expression[index,:]*perc
+        spliced_expression[index,:]=spliced_expression[index,:]-added_expression
+        unspliced_expression[index,:]=unspliced_expression[index,:]+added_expression
+
+    adata.X=expression
+    adata.layers['spliced']=spliced_expression
+    adata.layers['unspliced']=unspliced_expression
+    adata.obs['mean_leakage']=allperc
+    return adata
+
+def simulate_boundary_underestimation(adata:'AnnData',max_cyto_prop_lost:float=0.1,how:str='random'):
+    ''' Simulate an underestimation of the boundaries
+     ----------
+    adata:'AnnData object'
+        Adata object including previously simulated cells 
+    max_cyto_prop_lost:float
+        Maximum proportion of cytoplasmic counts not properly segmented due do cell boundary underestimation
+    how:str
+        Method to simulate boundary underestimation. It can be 'random','with_descending_trajectory' or 'with ascending trajectory'
+    Returns
+    -------
+    adata:'AnnData object'
+        Adata object including previously cells where cell boundary underestimation has been considered
+    '''
+
+    expression=np.array(adata.X)
+    spliced_expression=adata.layers['spliced']
+    unspliced_expression=adata.layers['unspliced']
+    allperc=[]
+    if how=='random':
+        for index in range(expression.shape[0]):
+            perc=[random.uniform(0,max_cyto_prop_lost) for e in range(expression.shape[1])]
+            allperc.append(np.mean(perc))
+            lost_expression=spliced_expression[index,:]*perc
+            spliced_expression[index,:]=spliced_expression[index,:]-lost_expression
+            
+    if how=='with_descending_trajectory':
+        dependent_max=a.obs['true_t'].div(a.obs['true_t'].max())*max_cyto_prop_lost
+        for index in range(expression.shape[0]):
+            perc=[random.uniform(0,dependent_max[index]) for e in range(expression.shape[1])]
+            allperc.append(np.mean(perc))
+            lost_expression=spliced_expression[index,:]*perc
+            spliced_expression[index,:]=spliced_expression[index,:]-lost_expression
+    if how=='with_ascending_trajectory':
+        dependent_max=(1-(a.obs['true_t'].div(a.obs['true_t'].max())))*max_cyto_prop_lost
+        for index in range(expression.shape[0]):
+            perc=[random.uniform(0,dependent_max[index]) for e in range(expression.shape[1])]
+            allperc.append(np.mean(perc))
+            lost_expression=spliced_expression[index,:]*perc
+            spliced_expression[index,:]=spliced_expression[index,:]-lost_expression
+
+    adata.X=spliced_expression+unspliced_expression
+    adata.layers['spliced']=spliced_expression
+    adata.layers['unspliced']=unspliced_expression
+    adata.obs['boundary_underestimation']=allperc
+    return adata
+
+
