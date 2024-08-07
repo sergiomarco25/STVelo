@@ -1,0 +1,14 @@
+{
+    "data_path": "data/Xenium_V1_mouse_pup_outs/adata_gut_tr.h5ad",
+    "mode": "stochastic",
+    "preprocess_params": {
+      "min_counts": 20,
+      "min_cells": 4,
+      "n_neighbors": 15,
+      "n_pcs": 0,
+      "min_dist": 0.1,
+      "resolution": 0.5
+    },
+    "save_anndata": false
+  }
+  
