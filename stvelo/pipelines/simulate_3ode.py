@@ -276,3 +276,12 @@ def simulation_3ode(
     # return AnnData(Sn, obs, var, layers=layers)
     return {'adata_s_u':AnnData(Sn,obs,var,layers=layer_spliced_unspliced), 'adata_n_c':AnnData(Sn,obs, var, layers=layer_nuc_cyto)}
     # return AnnData(Sn,obs,var,layers=layer_spliced_unspliced), AnnData(Sn,obs, var, layers=layer_nuc_cyto)
+    
+def switch_times(t_max, n_vars):
+    lower_bound = 0.05 * t_max
+    upper_bound = 0.8 * t_max
+
+    
+    uniform_array = np.random.uniform(lower_bound, upper_bound, n_vars)
+
+    return uniform_array
