@@ -1,5 +1,5 @@
 import scvelo as scv
-#from scvi.external import VELOVI
+from scvi.external import VELOVI
 import torch
 import numpy as np
 from pipelines.preprocessing import preprocess_data_velovi
