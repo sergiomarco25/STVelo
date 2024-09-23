@@ -2,6 +2,7 @@
 import numpy as np
 import warnings
 from anndata import AnnData
+import os 
 
 
 def unspliced(tau, u0, alpha, beta):
@@ -121,6 +122,8 @@ def simulation_3ode(
     noise_level=1,
     switches=None,
     random_seed=0,
+    save = False,
+    saving_path =None
 ):
     """Simulation of mRNA splicing kinetics.
 
@@ -272,9 +275,15 @@ def simulation_3ode(
     layer_spliced_unspliced = {"unspliced": U, "spliced":Sn+Sc}
     layer_nuc_cyto = {"unspliced": U+Sn, "spliced": Sc}
 
+    adata_dict = {'adata_s_u':AnnData(Sn,obs,var,layers=layer_spliced_unspliced), 'adata_n_c':AnnData(Sn,obs, var, layers=layer_nuc_cyto)}
+
+    if save:
+        for key , adata in adata_dict.items():
+            adata.write(os.path.join(saving_path,key+'.h5ad'))
+
     
     # return AnnData(Sn, obs, var, layers=layers)
-    return {'adata_s_u':AnnData(Sn,obs,var,layers=layer_spliced_unspliced), 'adata_n_c':AnnData(Sn,obs, var, layers=layer_nuc_cyto)}
+    return adata_dict
     # return AnnData(Sn,obs,var,layers=layer_spliced_unspliced), AnnData(Sn,obs, var, layers=layer_nuc_cyto)
     
 def switch_times(t_max, n_vars):
