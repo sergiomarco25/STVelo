@@ -77,4 +77,3 @@ class Velocities:
         ) * scaling
         adata.layers["fit_t"] = latent_time.values * scaling[np.newaxis, :]
         adata.var['fit_scaling'] = 1.0
-
