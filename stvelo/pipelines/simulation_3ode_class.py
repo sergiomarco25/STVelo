@@ -16,21 +16,39 @@ class Simulation3ODE:
         """
         self.config = config
         params = self.config.get('parameters',{})
+        
         options = self.config.get('options',{})
+
+        coeff_options = self.config.get('coeff_generate_options',{})
+
+
         self.n_obs = params.get('n_obs', 300)
         self.n_vars = params.get('n_vars', 100)
-        self.alpha = params.get('alpha', 5)
-        self.beta = params.get('beta', 0.6)
-        self.nu = params.get('nu', 0.3)
-        self.gamma = params.get('gamma', 0.25)
         self.alpha_ = params.get('alpha_', 0)
+
+
+        if options.get('generate_parameters'):
+            corr = coeff_options.get('corr')
+            sd = coeff_options.get('sd')
+            means = coeff_options.get('mean')
+
+            self.alpha, self.beta, self.nu, self.gamma = self.sample_parameters(correlations=corr, sigmas=sd, means=means, n_samples= self.n_vars)
+        
+        else:
+            self.alpha = params.get('alpha', 5)
+            self.beta = params.get('beta', 0.6)
+            self.nu = params.get('nu', 0.3)
+            self.gamma = params.get('gamma', 0.25)
+        
         self.t_max = params.get('t_max', None)
         self.noise_model = params.get('noise_model', "normal")
         self.noise_level = params.get('noise_level', 1)
-        self.switches = params.get('switches', None)
+        
         self.random_seed = random_seed
+
         self.save = options.get("save",False)
         self.saving_path = options.get("saving_path",None)
+        self.generate_switch_times = options.get("generate_switch_times", False)
 
         np.random.seed(self.random_seed)
 
@@ -170,29 +188,30 @@ class Simulation3ODE:
         t_max = self.t_max
         noise_model = self.noise_model
         noise_level = self.noise_level
-        switches = self.switches
         random_seed = self.random_seed
 
         np.random.seed(random_seed)
-
-        alpha = 5 if alpha is None else alpha
-        beta = 0.6 if beta is None else beta
-        nu = 0.3 if nu is None else nu
-        gamma = 0.25 if gamma is None else gamma
-        alpha_ = 0 if alpha_ is None else alpha_
 
         t = self.draw_poisson(n_obs)
         if t_max is not None:
             t *= t_max / np.max(t)
         t_max = np.max(t)
 
-        switches = (
-            self.cycle([0.4, 0.7, 1, 0.1], n_vars)
-            if switches is None
-            else self.cycle(switches, n_vars)
-        )
+        if self.generate_switch_times:
+            switches = self.switch_times(t_max = t_max, n_vars = n_vars)
+            switches = self.cycle(switches,n_vars)
+        else:
+            switches = self.cycle([0.4, 0.7, 1, 0.1], n_vars)
 
-        t_ = np.array([np.max(t[t < t_i * t_max]) for t_i in switches])
+        # switches = (
+        #     self.cycle([0.4, 0.7, 1, 0.1], n_vars)
+        #     if switches is None
+        #     else self.cycle(switches, n_vars)
+        # )
+
+        # t_ = np.array([np.max(t[t < t_i * t_max]) for t_i in switches])
+
+        t_ = np.array([np.max(t[t < t_i]) for t_i in switches])
 
         noise_level = self.cycle(
             noise_level, len(switches) if n_vars is None else n_vars
@@ -215,7 +234,7 @@ class Simulation3ODE:
                 beta_i,
                 nu_i,
                 gamma_i,
-                alpha_=alpha_,
+                alpha_=self.alpha_,
                 u0=0,
                 sn0=0,
                 sc0=0,
@@ -291,7 +310,7 @@ class Simulation3ODE:
             adata_n_c_filename: adata_n_c,
         }
 
-    def simulate_multi_obs(self, n_obs_list, n_vars_list):
+    def simulate_multi_obs_var(self, n_obs_list, n_vars_list):
         """
         Simulates multiple datasets with different n_obs and n_vars.
         If n_obs_list and n_vars_list are given as lists, it will create datasets accordingly.
@@ -315,3 +334,97 @@ class Simulation3ODE:
         self.n_obs = original_n_obs
         self.n_vars = original_n_vars
         return adata_dict
+
+
+
+    def sample_parameters(self,correlations, sigmas, means=None, n_samples=1, random_state=None):
+        """
+        Samples alpha, beta, nu, and gamma parameters from a multivariate log-normal distribution
+        using a list of six correlation coefficients.
+
+        Parameters:
+        - correlations (list of floats): Correlation coefficients in the following order:
+            [rho_alpha_beta, rho_alpha_nu, rho_alpha_gamma, rho_beta_nu, rho_beta_gamma, rho_nu_gamma]
+        - sigmas (list of floats): Standard deviations for [log(alpha), log(beta), log(nu), log(gamma)]
+        - means (list of floats, optional): Means for [log(alpha), log(beta), log(nu), log(gamma)]
+                                        Defaults to [ln(10), ln(1), ln(0.5), ln(0.1)] if not provided.
+        - n_samples (int, optional): Number of parameter sets to sample. Default is 1.
+        - random_state (int or np.random.Generator, optional): Seed or random number generator for reproducibility.
+
+        Returns:
+        - alpha (list of floats): Sampled alpha parameters.
+        - beta (list of floats): Sampled beta parameters.
+        - nu (list of floats): Sampled nu parameters.
+        - gamma (list of floats): Sampled gamma parameters.
+        """
+
+        num_params = 4  # alpha, beta, nu, gamma
+
+        # Validate input lengths
+        if len(correlations) != 6:
+            raise ValueError("Correlations list must have exactly 6 elements.")
+        if len(sigmas) != num_params:
+            raise ValueError(f"Sigmas list must have exactly {num_params} elements.")
+
+        # Validate correlation values are between -1 and 1
+        for idx, corr in enumerate(correlations):
+            if not -1 <= corr <= 1:
+                raise ValueError(f"Correlation at position {idx} ({corr}) is out of bounds. Must be between -1 and 1.")
+
+        # Set default means if not provided
+        if means is None:
+            means = [np.log(10), np.log(1), np.log(0.5), np.log(0.1)]
+        else:
+            if len(means) != num_params:
+                raise ValueError(f"Means list must have exactly {num_params} elements.")
+        means = np.array(means)
+
+        # Convert sigmas to a NumPy array
+        sigmas = np.array(sigmas)
+
+        # Extract individual correlations
+        rho_alpha_beta, rho_alpha_nu, rho_alpha_gamma, rho_beta_nu, rho_beta_gamma, rho_nu_gamma = correlations
+
+        # Construct the full symmetric correlation matrix
+        correlation_matrix = np.array([
+            [1.0,             rho_alpha_beta,  rho_alpha_nu,   rho_alpha_gamma],
+            [rho_alpha_beta,  1.0,             rho_beta_nu,    rho_beta_gamma],
+            [rho_alpha_nu,    rho_beta_nu,     1.0,             rho_nu_gamma],
+            [rho_alpha_gamma, rho_beta_gamma,  rho_nu_gamma,    1.0]
+        ])
+
+        
+
+        # Check if the correlation matrix is symmetric
+        if not np.allclose(correlation_matrix, correlation_matrix.T, atol=1e-8):
+            raise ValueError("Constructed correlation matrix is not symmetric.")
+
+        # Construct the covariance matrix
+        cov_matrix = correlation_matrix * np.outer(sigmas, sigmas)
+
+        print(f"parameters generated with the covariance matrix: {cov_matrix}")
+
+        # Check if covariance matrix is positive semi-definite
+        eigenvalues = np.linalg.eigvals(cov_matrix)
+        if np.any(eigenvalues < -1e-8):  # Allow a small negative tolerance due to numerical precision
+            raise ValueError("Covariance matrix is not positive semi-definite. Please check your correlations and sigmas.")
+
+        # Set random state for reproducibility if provided
+        rng = np.random.default_rng(random_state)
+
+        # Sample from the multivariate normal distribution
+        log_params = rng.multivariate_normal(mean=means, cov=cov_matrix, size=n_samples)
+
+        # Exponentiate to get the original parameters
+        params = np.exp(log_params)
+
+        # Split the parameters into separate lists
+        alpha = params[:, 0].tolist()
+        beta = params[:, 1].tolist()
+        nu = params[:, 2].tolist()
+        gamma = params[:, 3].tolist()
+
+        return alpha, beta, nu, gamma
+
+
+
