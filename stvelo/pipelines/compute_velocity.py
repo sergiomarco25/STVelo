@@ -1,5 +1,5 @@
 import scvelo as scv
-#from scvi.external import VELOVI
+from scvi.external import VELOVI
 import torch
 import numpy as np
 from pipelines.preprocessing import preprocess_data_velovi
@@ -77,4 +77,3 @@ class Velocities:
         ) * scaling
         adata.layers["fit_t"] = latent_time.values * scaling[np.newaxis, :]
         adata.var['fit_scaling'] = 1.0
-
