@@ -276,13 +276,13 @@ class Simulation3ODE:
         layer_nuc_cyto = {"unspliced": U + Sn, "spliced": Sc}
 
         adata_s_u = AnnData(
-            Sn,
+            Sn+Sc+U,
             obs=obs,
             var=var,
             layers=layer_spliced_unspliced,
         )
         adata_n_c = AnnData(
-            Sn,
+            Sn+Sc+U,
             obs=obs,
             var=var,
             layers=layer_nuc_cyto,
