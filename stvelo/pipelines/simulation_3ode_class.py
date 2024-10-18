@@ -199,6 +199,8 @@ class Simulation3ODE:
 
         if self.generate_switch_times:
             switches = self.switch_times(t_max = t_max, n_vars = n_vars)
+
+
             switches = self.cycle(switches,n_vars)
         else:
             switches = self.cycle([0.4, 0.7, 1, 0.1], n_vars)
@@ -272,8 +274,11 @@ class Simulation3ODE:
             "true_scaling": np.ones(n_vars),
         }
 
-        layer_spliced_unspliced = {"unspliced": U, "spliced": Sn + Sc}
-        layer_nuc_cyto = {"unspliced": U + Sn, "spliced": Sc}
+        true_velocity_s_u = var['true_beta'] * U - var['true_gamma']*Sc
+        true_velocity_n_c = var['true_nu'] * Sn - var['true_gamma']*Sc
+
+        layer_spliced_unspliced = {"unspliced": U, "spliced": Sn + Sc, "spliced_cyt":Sc, "true_velocity": true_velocity_s_u}
+        layer_nuc_cyto = {"unspliced": U + Sn, "spliced": Sc, "spliced_nuc":Sn, "true_velocity": true_velocity_n_c }
 
         adata_s_u = AnnData(
             Sn+Sc+U,
@@ -357,6 +362,7 @@ class Simulation3ODE:
         - nu (list of floats): Sampled nu parameters.
         - gamma (list of floats): Sampled gamma parameters.
         """
+        print(means)
 
         num_params = 4  # alpha, beta, nu, gamma
 
