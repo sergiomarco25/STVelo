@@ -119,7 +119,7 @@ def compute_mse(ms, mu, mn, mc, fit_s, fit_u, fit_n, fit_c):
     return mse_df
 
 
-def compute_confidence(adata, vkey="velocity"):
+def compute_confidence(adata, vkey="velocity", n_jobs = 2):
     """
     Compute the velocity confidence for each cell in the given AnnData object and return it as a DataFrame.
 
@@ -150,7 +150,7 @@ def compute_confidence(adata, vkey="velocity"):
     velo = adata.layers[vkey]
     
     # Compute the velocity graph based on the RNA velocity data.
-    scv.tl.velocity_graph(adata, vkey=vkey, n_jobs=2)
+    scv.tl.velocity_graph(adata, vkey=vkey, n_jobs=n_jobs)
     
     # Compute the velocity confidence for each cell.
     scv.tl.velocity_confidence(adata, vkey=vkey)

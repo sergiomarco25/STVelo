@@ -31,8 +31,9 @@ class Velocities:
                     # For scVelo velocity modes
                     if velocity_type == 'dynamical':
                         scv.tl.recover_dynamics(adata_copy,n_jobs=8)
+                    print(f'{velocity_type} velocity is being calculated.')
                     scv.tl.velocity(adata_copy, mode=velocity_type)
-                    scv.tl.velocity_graph(adata_copy)
+                    scv.tl.velocity_graph(adata_copy,n_jobs=8)
                     key = f'adata_{idx}_{velocity_type}'
                     result_adatas[key] = adata_copy
 
