@@ -15,40 +15,27 @@ class Simulation3ODE:
         Initializes the Simulation3ODE class with the given parameters.
         """
         self.config = config
-        params = self.config.get('parameters',{})
+        self.params = self.config.get('parameters',{})
         
-        options = self.config.get('options',{})
+        self.options = self.config.get('options',{})
 
-        coeff_options = self.config.get('coeff_generate_options',{})
-
-
-        self.n_obs = params.get('n_obs', 300)
-        self.n_vars = params.get('n_vars', 100)
-        self.alpha_ = params.get('alpha_', 0)
+        self.coeff_options = self.config.get('coeff_generate_options',{})
 
 
-        if options.get('generate_parameters'):
-            corr = coeff_options.get('corr')
-            sd = coeff_options.get('sd')
-            means = coeff_options.get('mean')
+        self.n_obs = self.params.get('n_obs', 300)
+        self.n_vars = self.params.get('n_vars', 100)
+        self.alpha_ = self.params.get('alpha_', 0)
 
-            self.alpha, self.beta, self.nu, self.gamma = self.sample_parameters(correlations=corr, sigmas=sd, means=means, n_samples= self.n_vars)
         
-        else:
-            self.alpha = params.get('alpha', 5)
-            self.beta = params.get('beta', 0.6)
-            self.nu = params.get('nu', 0.3)
-            self.gamma = params.get('gamma', 0.25)
-        
-        self.t_max = params.get('t_max', None)
-        self.noise_model = params.get('noise_model', "normal")
-        self.noise_level = params.get('noise_level', 1)
+        self.t_max = self.params.get('t_max', None)
+        self.noise_model = self.params.get('noise_model', "normal")
+        self.noise_level = self.params.get('noise_level', 1)
         
         self.random_seed = random_seed
 
-        self.save = options.get("save",False)
-        self.saving_path = options.get("saving_path",None)
-        self.generate_switch_times = options.get("generate_switch_times", False)
+        self.save = self.options.get("save",False)
+        self.saving_path = self.options.get("saving_path",None)
+        self.generate_switch_times = self.options.get("generate_switch_times", False)
 
         np.random.seed(self.random_seed)
 
@@ -180,15 +167,29 @@ class Simulation3ODE:
         """
         n_obs = self.n_obs
         n_vars = self.n_vars
-        alpha = self.alpha
-        beta = self.beta
-        nu = self.nu
-        gamma = self.gamma
-        alpha_ = self.alpha_
         t_max = self.t_max
         noise_model = self.noise_model
         noise_level = self.noise_level
         random_seed = self.random_seed
+
+
+        if self.options.get('generate_parameters'):
+            corr = self.coeff_options.get('corr')
+            sd = self.coeff_options.get('sd')
+            means = self.coeff_options.get('mean')
+
+            self.alpha, self.beta, self.nu, self.gamma = self.sample_parameters(correlations=corr, sigmas=sd, means=means, n_samples= self.n_vars)
+        
+        else:
+            self.alpha = self.params.get('alpha', 5)
+            self.beta = self.params.get('beta', 0.6)
+            self.nu = self.params.get('nu', 0.3)
+            self.gamma = self.params.get('gamma', 0.25)
+
+        alpha = self.alpha
+        beta = self.beta
+        nu = self.nu
+        gamma = self.gamma
 
         np.random.seed(random_seed)
 
@@ -199,8 +200,6 @@ class Simulation3ODE:
 
         if self.generate_switch_times:
             switches = self.switch_times(t_max = t_max, n_vars = n_vars)
-
-
             switches = self.cycle(switches,n_vars)
         else:
             switches = self.cycle([0.4, 0.7, 1, 0.1], n_vars)
@@ -362,7 +361,7 @@ class Simulation3ODE:
         - nu (list of floats): Sampled nu parameters.
         - gamma (list of floats): Sampled gamma parameters.
         """
-        print(means)
+        print(f'mean values of [alpha,beta,nu,gamma]:{means}')
 
         num_params = 4  # alpha, beta, nu, gamma
 
@@ -408,7 +407,7 @@ class Simulation3ODE:
         # Construct the covariance matrix
         cov_matrix = correlation_matrix * np.outer(sigmas, sigmas)
 
-        print(f"parameters generated with the covariance matrix: {cov_matrix}")
+        print(f"parameters for {n_samples} genes,  generated with the covariance matrix: {cov_matrix}")
 
         # Check if covariance matrix is positive semi-definite
         eigenvalues = np.linalg.eigvals(cov_matrix)
