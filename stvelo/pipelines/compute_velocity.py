@@ -14,12 +14,16 @@ class Velocities:
         self.adatas = adatas  # Expecting a dictionary {name: adata}
         self.config = config
         self.velocity_types = config.get('velocity_types', [])
+        self.velovi_model_params = config.get('velovi_model_params',None)
+        self.velovi_train_params = config.get('velovi_train_params',None)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print('Using device:', self.device)
 
     
     def compute_velocities(self):
         result_adatas = {}  
+        if 'velovi' in self.velocity_types:
+            vae_dict = {}
         for name, adata in self.adatas.items():
 
             # Extract the part after the first '_' in the name
@@ -30,10 +34,11 @@ class Velocities:
                 if velocity_type in ['deterministic', 'stochastic', 'dynamical']:
                     # For scVelo velocity modes
                     if velocity_type == 'dynamical':
-                        scv.tl.recover_dynamics(adata_copy,n_jobs=8)
+                        n_jobs = self.config.get('n_jobs',8)
+                        scv.tl.recover_dynamics(adata_copy,n_jobs=n_jobs)
                     print(f'{velocity_type} velocity is being calculated.')
                     scv.tl.velocity(adata_copy, mode=velocity_type)
-                    scv.tl.velocity_graph(adata_copy,n_jobs=8)
+                    scv.tl.velocity_graph(adata_copy,n_jobs=12)
                     key = f'adata_{idx}_{velocity_type}'
                     result_adatas[key] = adata_copy
 
@@ -42,18 +47,36 @@ class Velocities:
                     adata_copy = preprocess_data_velovi(adata_copy)
                     print('min_max_scaler is working!')
                     VELOVI.setup_anndata(adata_copy, spliced_layer="Ms", unspliced_layer="Mu")
-                    vae = VELOVI(adata_copy)
+
+                    n_hidden = self.velovi_model_params.get('n_hidden',256)
+                    n_latent = self.velovi_model_params.get('n_latent',10)
+                    n_layers = self.velovi_model_params.get('n_layers',1)
+
+
+                    vae = VELOVI(adata_copy, n_hidden=n_hidden, n_latent=n_latent,n_layers=n_layers)
                     vae.to_device(self.device)
-                    vae.train(max_epochs=100)
+                    
+                    epochs = self.velovi_train_params.get('epochs',200)
+                    lr = self.velovi_train_params.get('lr',0.01)
+                    weight_decay = self.velovi_train_params.get('weight_decay',0.01)
+                    early_stop = self.velovi_train_params.get('early_stop',True)
+                    batch_size = self.velovi_train_params.get('batch_size',256)
+
+                    vae.train(max_epochs=epochs, lr= lr, weight_decay=weight_decay, early_stopping= early_stop, batch_size=batch_size)
+                    scv.tl.velocity_graph(adata_copy,n_jobs=12)
 
                     self.add_velovi_outputs_to_adata(adata_copy,vae)
 
                     key = f'adata_{idx}_velovi'
+                    vae_dict[key] = vae
                     result_adatas[key] = adata_copy
 
                 else:
                     print(f"Unknown velocity type: {velocity_type}")
-        return result_adatas
+        if 'velovi' in self.velocity_types:
+            return vae_dict, result_adatas
+        else:
+            return result_adatas
 
     def add_velovi_outputs_to_adata(self, adata, vae):
         latent_time = vae.get_latent_time(n_samples=25)
