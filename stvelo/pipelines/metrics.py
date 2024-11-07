@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scvelo.plotting.simulation import compute_dynamics
 from sklearn.metrics import accuracy_score
+import anndata as ad
 
 
 def get_fit_scvelo(adata):
@@ -472,4 +473,220 @@ def get_sign_accuracy(adata_dict):
     
     allsigns = pd.concat(allsig)
     return allsigns
+
+
+def compute_true_rna_velocity(adata, name=str):
+    """
+    Compute the true RNA velocity for cells in an AnnData object based on 
+    spliced and unspliced RNA counts, and predefined transcription rates.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing RNA velocity data.
+        It is expected to have spliced counts in 'adata.layers['Ms']',
+        unspliced counts in 'adata.layers['Mu']', and true alpha, beta, and gamma 
+        parameters in 'adata.var'.
+    name (str): A string to indicate which beta variable to use ('true_beta' 
+        or 'true_nu'). If the name contains '_n_c', it uses 'true_nu'; otherwise,
+        it defaults to 'true_beta'.
+
+    Returns:
+    adata (AnnData): The input AnnData object with the computed RNA velocity 
+        stored in 'adata.layers['true_velocity']'.
+    """
+    # Extract spliced and unspliced counts from adata layers
+    spliced = adata.layers['Ms']
+    unspliced = adata.layers['Mu']
+    
+    # Extract true alpha, beta, and gamma from adata.var
+    alpha = adata.var['true_alpha'].values
+    if '_n_c' in name:
+        beta = adata.var['true_nu'].values
+    else:
+        beta = adata.var['true_beta'].values
+    gamma = adata.var['true_gamma'].values
+    
+    # Initialize a matrix to store RNA velocity (same shape as spliced/unspliced)
+    velocity = np.zeros_like(spliced)
+    
+    # Calculate RNA velocity for each gene (column) across cells (rows)
+    for i in range(spliced.shape[1]):  # iterate over genes
+        velocity[:, i] = beta[i] * unspliced[:, i] - gamma[i] * spliced[:, i]
+    
+    # Store the calculated velocity in a new layer of the adata object
+    adata.layers['true_velocity'] = velocity
+    
+    return adata
+
+def get_true_rna_velocity(adata_dict):
+    """
+    Compute true RNA velocity for each AnnData object in a dictionary.
+
+    Parameters:
+    adata_dict (dict): A dictionary where keys are dataset identifiers and values
+        are AnnData objects. Each AnnData object is expected to have the necessary
+        layers and variable annotations for RNA velocity calculations.
+
+    Returns:
+    adata_dict (dict): The input dictionary with updated AnnData objects containing 
+        the computed RNA velocities in 'adata.layers['true_velocity']'.
+    """
+    for k, adata in adata_dict.items():
+        adata_dict[k] = compute_true_rna_velocity(adata, k)
+    return adata_dict
+
+
+def cosine_similarity_vs_true_velocity(adata_dict, mode='by_gene'):
+    """
+    Compute cosine similarity between true RNA velocity and inferred RNA velocity 
+    for each dataset in `adata_dict`. The similarity can be computed either by gene 
+    (across cells) or by cell (across genes).
+
+    Parameters:
+    adata_dict (dict): A dictionary where keys are dataset identifiers and values 
+        are AnnData objects. Each AnnData object is expected to have the following layers:
+        - 'true_velocity': Precomputed true RNA velocity for each gene or cell.
+        - 'velocity': Inferred RNA velocity.
+        Additionally, `adata.var['velocity_genes']` should indicate which genes 
+        to include in the cosine similarity calculation.
+    
+    mode (str): The mode of computation. Either 'by_gene' to compute cosine similarity
+        across cells for each gene, or 'by_cell' to compute cosine similarity across
+        genes for each cell. Default is 'by_gene'.
+
+    Returns:
+    tuple: A tuple containing:
+        - adata_dict (dict): The input dictionary with updated AnnData objects containing
+            cosine similarity values stored in 'obs' (for mode='by_cell') or 'var' 
+            (for mode='by_gene').
+        - mse_mat (pd.DataFrame): A DataFrame containing the cosine similarity values
+            for each dataset (rows) and each gene or cell (columns) depending on the mode.
+    """
+    d1 = list(adata_dict.keys())[0]
+    
+    # Initialize the cosine similarity matrix based on the mode
+    if mode == 'by_gene':
+        mse_mat = pd.DataFrame(index=adata_dict.keys(), columns=adata_dict[d1].var.index)
+    elif mode == 'by_cell':
+        mse_mat = pd.DataFrame(index=adata_dict.keys(), columns=adata_dict[d1].obs.index)
+    
+    # Compute cosine similarity for each dataset in adata_dict
+    for d1 in adata_dict.keys():
+        # Recompute true RNA velocity for each dataset
+        adata_dict[d1] = compute_true_rna_velocity(adata_dict[d1], d1)
+        
+        # Filter out non-velocity genes
+        velo1 = adata_dict[d1].to_df('true_velocity')
+        velo2 = adata_dict[d1].to_df('velocity')
+        velo1 = velo1.loc[:, adata_dict[d1].var['velocity_genes']]  # Keep only velocity genes
+        velo2 = velo2.loc[:, adata_dict[d1].var['velocity_genes']]  # Keep only velocity genes
+        
+        allsim = []
+        
+        # Compute cosine similarity by cell (across genes)
+        if mode == 'by_cell':
+            for e in tqdm(range(0, velo1.shape[0])):  # Iterate over cells
+                A = velo1.iloc[e, :]
+                B = velo2.iloc[e, :]
+                dot_product = np.dot(A, B)
+                magnitude_A = np.linalg.norm(A)
+                magnitude_B = np.linalg.norm(B)
+                cosine_similarity = dot_product / (magnitude_A * magnitude_B)
+                allsim.append(cosine_similarity)
+            
+            # Store cosine similarity in obs and mse matrix
+            adata_dict[d1].obs['cosine_similarity_vs_true_velocity'] = allsim
+            mse_mat.loc[d1, :] = allsim
+        
+        # Compute cosine similarity by gene (across cells)
+        if mode == 'by_gene':
+            for e in tqdm(range(0, velo1.shape[1])):  # Iterate over genes
+                A = velo1.iloc[:, e]
+                B = velo2.iloc[:, e]
+                dot_product = sum(a * b for a, b in zip(A, B))
+                magnitude_A = sum(a * a for a in A)**0.5
+                magnitude_B = sum(b * b for b in B)**0.5
+                cosine_similarity = dot_product / (magnitude_A * magnitude_B)
+                allsim.append(cosine_similarity)
+            
+            # Map cosine similarities to velocity genes
+            dici = dict(zip(adata_dict[d1].var.index[adata_dict[d1].var['velocity_genes']], allsim))
+            adata_dict[d1].var['cosine_similarity_vs_true_velocity'] = adata_dict[d1].var.index.map(dici)
+            mse_mat.loc[d1, :] = mse_mat.columns.map(dici)
+
+    return adata_dict, mse_mat.astype(float)
+
+def correlation_vs_true_velocity(adata_dict, mode='by_gene'):
+    """
+    Compute the Pearson correlation between true RNA velocity and inferred RNA velocity 
+    for each dataset in `adata_dict`. The correlation can be computed either by gene 
+    (across cells) or by cell (across genes).
+
+    Parameters:
+    adata_dict (dict): A dictionary where keys are dataset identifiers and values 
+        are AnnData objects. Each AnnData object is expected to contain:
+        - 'true_velocity': Precomputed true RNA velocity for each gene or cell.
+        - 'velocity': Inferred RNA velocity.
+        Additionally, `adata.var['velocity_genes']` should indicate which genes 
+        to include in the correlation calculation.
+    
+    mode (str): The mode of computation. Either 'by_gene' to compute correlation
+        across cells for each gene, or 'by_cell' to compute correlation across
+        genes for each cell. Default is 'by_gene'.
+
+    Returns:
+    tuple: A tuple containing:
+        - adata_dict (dict): The input dictionary with updated AnnData objects containing
+            correlation values stored in 'obs' (for mode='by_cell') or 'var' 
+            (for mode='by_gene').
+        - mse_mat (pd.DataFrame): A DataFrame containing the correlation values
+            for each dataset (rows) and each gene or cell (columns) depending on the mode.
+    """
+    d1 = list(adata_dict.keys())[0]
+    
+    # Initialize the correlation matrix based on the mode
+    if mode == 'by_gene':
+        mse_mat = pd.DataFrame(index=adata_dict.keys(), columns=adata_dict[d1].var.index)
+    elif mode == 'by_cell':
+        mse_mat = pd.DataFrame(index=adata_dict.keys(), columns=adata_dict[d1].obs.index)
+
+    # Compute correlation for each dataset in adata_dict
+    for d1 in adata_dict.keys():
+        # Recompute true RNA velocity for each dataset
+        adata_dict[d1] = compute_true_rna_velocity(adata_dict[d1], d1)
+        
+        # Extract true and inferred velocity, filtered for velocity genes
+        velo1 = adata_dict[d1].to_df('true_velocity')
+        velo2 = adata_dict[d1].to_df('velocity')
+        velo1 = velo1.loc[:, adata_dict[d1].var['velocity_genes']]  # Filter by velocity genes
+        velo2 = velo2.loc[:, adata_dict[d1].var['velocity_genes']]
+        
+        allsim = []
+        
+        # Compute correlation by cell (across genes)
+        if mode == 'by_cell':
+            for e in tqdm(range(0, velo1.shape[0])):  # Iterate over cells
+                A = velo1.iloc[e, :]
+                B = velo2.iloc[e, :]
+                cosine_similarity = np.corrcoef(A, B)[0, 1]  # Pearson correlation
+                allsim.append(cosine_similarity)
+            
+            # Store correlation values in obs and mse matrix
+            adata_dict[d1].obs['correlation_vs_true_velocity'] = allsim
+            mse_mat.loc[d1, :] = allsim
+        
+        # Compute correlation by gene (across cells)
+        if mode == 'by_gene':
+            for e in tqdm(range(0, velo1.shape[1])):  # Iterate over genes
+                A = velo1.iloc[:, e]
+                B = velo2.iloc[:, e]
+                cosine_similarity = np.corrcoef(A, B)[0, 1]  # Pearson correlation
+                allsim.append(cosine_similarity)
+            
+            # Map correlation values to velocity genes
+            dici = dict(zip(adata_dict[d1].var.index[adata_dict[d1].var['velocity_genes']], allsim))
+            adata_dict[d1].var['correlation_vs_true_velocity'] = adata_dict[d1].var.index.map(dici)
+            mse_mat.loc[d1, :] = mse_mat.columns.map(dici)
+
+    return adata_dict, mse_mat.astype(float)
+
 
