@@ -31,6 +31,14 @@ class Preprocessing:
         if functions.get('log1p', False):
             sc.pp.log1p(self.adata)
 
+        if functions.get('use_scv',False):
+            min_cells = params.get('min_cells', None)
+            min_counts = params.get('min_counts', None)
+            min_shared_counts = params.get('min_shared_counts')
+            n_top_genes = params.get('n_top_genes')
+            enforce = params.get('enforce',True)
+            scv.pp.filter_and_normalize(self.adata, min_cells=min_cells, min_counts=min_counts, min_shared_counts = min_shared_counts, n_top_genes=n_top_genes, enforce=enforce )   
+            print('used_scvelo_filter_and_normalize')
         if functions.get('pca', False):
             sc.pp.pca(self.adata)
 
@@ -50,7 +58,7 @@ class Preprocessing:
         if functions.get('moments', False):
             n_pcs = params.get('n_pcs', None)
             n_neighbors = params.get('n_neighbors', None)
-            scv.pp.moments(self.adata, n_pcs=n_pcs, n_neighbors=n_neighbors)
+            scv.pp.moments(self.adata, n_pcs=None, n_neighbors=None)
 
         return self.adata
     
@@ -58,8 +66,9 @@ def preprocess_data_velovi(
     adata: AnnData,
     spliced_layer: Optional[str] = "Ms",
     unspliced_layer: Optional[str] = "Mu",
-    min_max_scale: bool = True,
+    min_max_scale: bool = False,
     filter_on_r2: bool = True,
+    min_r2:Optional[float]=0.01
 ) -> AnnData:
     """Preprocess data.
 
@@ -92,10 +101,11 @@ def preprocess_data_velovi(
         )
 
     if filter_on_r2:
-        scv.tl.velocity(adata, mode="deterministic")
+        print(min_r2)
+        scv.tl.velocity(adata, mode="deterministic",min_r2=min_r2)
 
         adata = adata[
-            :, np.logical_and(adata.var.velocity_r2 > 0, adata.var.velocity_gamma > 0)
+            :, np.logical_and(adata.var.velocity_r2 > min_r2, adata.var.velocity_gamma > 0)
         ].copy()
         adata = adata[:, adata.var.velocity_genes].copy()
 
