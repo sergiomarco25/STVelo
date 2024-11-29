@@ -79,7 +79,7 @@ class Velocities:
             return result_adatas
 
     def add_velovi_outputs_to_adata(self, adata, vae):
-        latent_time = vae.get_latent_time(n_samples=25)
+        latent_time = vae.get_latent_time(n_samples=25 )
         velocities = vae.get_velocity(n_samples=25, velo_statistic="mean")
 
         t = latent_time

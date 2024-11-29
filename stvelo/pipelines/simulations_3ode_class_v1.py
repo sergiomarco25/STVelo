@@ -36,6 +36,8 @@ class Simulation3ODE:
         self.save = self.options.get("save",False)
         self.saving_path = self.options.get("saving_path",None)
         self.generate_switch_times = self.options.get("generate_switch_times", False)
+        self.lower_bound = self.options.get("lower_bound", 0.1)
+        self.upper_bound = self.options.get("upper_bound",0.5)
 
         np.random.seed(self.random_seed)
 
@@ -156,8 +158,8 @@ class Simulation3ODE:
             return [array] if n_vars is None else [array] * n_vars
 
     def switch_times(self, n_vars):
-        lower_bound = 0.1 
-        upper_bound = 0.55
+        lower_bound = self.lower_bound 
+        upper_bound = self.upper_bound
         uniform_array = np.random.uniform(lower_bound, upper_bound, n_vars)
         return uniform_array
 
@@ -383,13 +385,51 @@ class Simulation3ODE:
         else:
             if len(means) != num_params:
                 raise ValueError(f"Means list must have exactly {num_params} elements.")
+            
         means = np.array(means)
 
         # Convert sigmas to a NumPy array
         sigmas = np.array(sigmas)
+        
+        cvs = sigmas/means
+
+        sigma_sq = np.log(1 + cvs ** 2)
+
+        # Compute sigma = sqrt(sigma^2)
+        sigma_lnX = np.sqrt(sigma_sq)
+
+        sigma_lnX_sq = sigma_lnX ** 2
+
+         # Compute mu = ln(mean) - (sigma^2) / 2
+        mu_lnX = np.log(means) - (sigma_sq / 2)
+
+        pairs = [(0,1), (0,2), (0,3), (1,2), (1,3), (2,3)]
+
+        rho_lnX_lnY_list = []
+
+        V = np.expm1(sigma_lnX_sq)
+
+        for idx, (i, j) in enumerate(pairs):
+            sigma_i = sigma_lnX[i]
+            sigma_j = sigma_lnX[j]
+            V_i = V[i]
+            V_j = V[j]
+
+            rho_XY = correlations[idx]
+
+            # Compute s_{ij} = ln(1 + rho_XY * sqrt(V_i * V_j))
+            s_ij = np.log(1 + rho_XY * np.sqrt(V_i * V_j))
+
+            # Compute rho_lnX_lnY = s_{ij} / (sigma_i * sigma_j)
+            rho_lnX_lnY = s_ij / (sigma_i * sigma_j)
+
+            # Append to list
+            rho_lnX_lnY_list.append(rho_lnX_lnY)
+
+
 
         # Extract individual correlations
-        rho_alpha_beta, rho_alpha_nu, rho_alpha_gamma, rho_beta_nu, rho_beta_gamma, rho_nu_gamma = correlations
+        rho_alpha_beta, rho_alpha_nu, rho_alpha_gamma, rho_beta_nu, rho_beta_gamma, rho_nu_gamma = rho_lnX_lnY_list
 
         # Construct the full symmetric correlation matrix
         correlation_matrix = np.array([
@@ -406,7 +446,7 @@ class Simulation3ODE:
             raise ValueError("Constructed correlation matrix is not symmetric.")
 
         # Construct the covariance matrix
-        cov_matrix = correlation_matrix * np.outer(sigmas, sigmas)
+        cov_matrix = correlation_matrix * np.outer(sigma_lnX, sigma_lnX)
 
         print(f"parameters for {n_samples} genes,  generated with the covariance matrix: {cov_matrix}")
 
@@ -419,7 +459,7 @@ class Simulation3ODE:
         rng = np.random.default_rng(random_state)
 
         # Sample from the multivariate normal distribution
-        log_params = rng.multivariate_normal(mean=means, cov=cov_matrix, size=n_samples)
+        log_params = rng.multivariate_normal(mean=mu_lnX, cov=cov_matrix, size=n_samples)
 
         # Exponentiate to get the original parameters
         params = np.exp(log_params)

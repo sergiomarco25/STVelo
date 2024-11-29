@@ -213,3 +213,96 @@ def proportions_nuc_cyto(
     # savefig_or_show("proportions", dpi=dpi, save=save, show=show)
     
     return ax
+
+
+
+
+def proportions_nuc_cyt(
+    adata,
+    groupby="clusters",
+    layers=None,
+    highlight="unspliced",
+    add_labels_pie=True,
+    add_labels_bar=True,
+    fontsize=8,
+    figsize=(10, 2),
+    dpi=100,
+    use_raw=True,
+    show=True,
+    save=None,
+    ax=None  # Added ax parameter
+    ):
+    """
+    Plot pie chart of spliced/unspliced proportions.
+
+    Parameters
+    ----------
+    adata: AnnData
+        Annotated data matrix.
+    ax: matplotlib.axes.Axes, optional
+        Axes object where the pie chart will be drawn. If None, a new figure and axes are created.
+    (Other parameters remain the same)
+    """
+
+    # Get counts per cell for each layer
+    if layers is None:
+        layers = ["spliced", "unspliced", "ambiguous"]
+    layers_keys = [key for key in layers if key in adata.layers.keys()]
+    layers_keys_n = ['cytoplasmic', 'nucleic']  # Adjust layer names if necessary
+
+    counts_layers = [np.sum(adata.layers[key], axis=1) for key in layers_keys]
+
+    if use_raw:
+        ikey, obs = "initial_size_", adata.obs
+        counts_layers = [
+            obs[ikey + layer_key] if ikey + layer_key in obs.keys() else c
+            for layer_key, c in zip(layers_keys, counts_layers)
+        ]
+    counts_total = np.sum(counts_layers, axis=0)
+    counts_total += counts_total == 0
+    counts_layers = np.array([counts / counts_total for counts in counts_layers])
+
+    # If ax is None, create a new figure and axes
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    colors = plt.get_cmap("tab20b")(np.linspace(0.10, 0.65, len(layers_keys)))
+
+    # Pie chart of total abundances
+    if highlight is None:
+        highlight = "none"
+    explode = [
+        0.1 if (layer_key == highlight or layer_key in highlight) else 0
+        for layer_key in layers_keys
+    ]
+
+    autopct = "%1.0f%%" if add_labels_pie else None
+    pie = ax.pie(
+        np.mean(counts_layers, axis=1),
+        colors=colors,
+        explode=explode,
+        autopct=autopct,
+        shadow=True,
+        startangle=45,
+    )
+    if autopct is not None:
+        for pct, color in zip(pie[-1], colors):
+            r, g, b, _ = color
+            pct.set_color("white" if r * g * b < 0.5 else "darkgrey")
+            pct.set_fontweight("bold")
+            pct.set_fontsize(fontsize)
+
+    # ax.legend(
+    #     layers_keys_n,
+    #     ncol=len(layers_keys),
+    #     bbox_to_anchor=(0, 1),
+    #     loc="upper right",
+    #     fontsize=fontsize,
+    # )
+
+    # If groupby is specified and present in adata.obs, plot the bar chart
+    # Since we are focusing on the pie chart, we can skip this part
+    # or you can include it if desired
+
+    # Return the axis object
+    return ax

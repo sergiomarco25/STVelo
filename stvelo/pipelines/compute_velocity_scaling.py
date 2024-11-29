@@ -32,7 +32,7 @@ class Velocities:
             vae_dict = {}
         for name, adata in self.adatas.items():
             if 'n_c' in name:
-                min_r2 = -0.2
+                min_r2 = 0.01
             else:
                 min_r2 = 0.01
             # Extract the part after the first '_' in the name
@@ -43,11 +43,12 @@ class Velocities:
                 if velocity_type in ['deterministic', 'stochastic', 'dynamical']:
                     # For scVelo velocity modes
                     if velocity_type == 'dynamical':
-                        n_jobs = self.config.get('n_jobs',8)
-                        scv.tl.recover_dynamics(adata_copy,n_jobs=n_jobs)
+                        n_jobs = self.config.get('n_jobs',1)
+                        print(n_jobs)
+                        scv.tl.recover_dynamics(adata_copy)
                     print(f'{velocity_type} velocity is being calculated.')
                     scv.tl.velocity(adata_copy, mode=velocity_type,min_r2=min_r2)
-                    scv.tl.velocity_graph(adata_copy,n_jobs=12)
+                    scv.tl.velocity_graph(adata_copy)
                     key = f'adata_{idx}_{velocity_type}'
                     result_adatas[key] = adata_copy
 
@@ -73,7 +74,7 @@ class Velocities:
                     batch_size = self.velovi_train_params.get('batch_size',256)
 
                     vae.train(max_epochs=epochs, lr= lr, weight_decay=weight_decay, early_stopping= early_stop, batch_size=batch_size)
-                    scv.tl.velocity_graph(adata_copy,n_jobs=12)
+                    scv.tl.velocity_graph(adata_copy,n_jobs=1)
 
                     self.add_velovi_outputs_to_adata(adata_copy,vae)
 

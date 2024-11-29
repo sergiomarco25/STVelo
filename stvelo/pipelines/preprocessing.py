@@ -66,7 +66,7 @@ def preprocess_data_velovi(
     adata: AnnData,
     spliced_layer: Optional[str] = "Ms",
     unspliced_layer: Optional[str] = "Mu",
-    min_max_scale: bool = False,
+    min_max_scale: bool = True,
     filter_on_r2: bool = True,
     min_r2:Optional[float]=0.01
 ) -> AnnData:
